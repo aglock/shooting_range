@@ -1,0 +1,31 @@
+<DOCTYPE html>
+  <html>
+
+  <head>
+    <style>
+      body {font-family: Verdana, sans-serif; font-size: 24px}
+      p { font-size: 24px; font-family: Verdana, sans-serif;}
+      #button {width: auto; height: 2em; font-size: 24px; font-family: Verdana, sans-serif;}
+    </style>
+    <title>Pistol Practice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+
+  <body>
+    <h1>Welcome to the Pistol shooting practice</h1>
+    <p>Enter number of seconds for countdown and number of seconds for target to show.</p>
+    <form action="shoot">
+      <label for="countDown">Timer sec:
+        </>
+        <br>
+        <input type="number" id="countDown" name="countDown" value="9"><br/>
+        <label for="showTarget">Show Target sec:
+          </>
+          <br>
+          <input type="number" id="showTarget" name="showTarget" value="4">
+          <br>
+          <input type="submit" value="Shoot again" id="button">
+    </form>
+  </body>
+
+  </html>
