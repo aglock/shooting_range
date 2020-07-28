@@ -1,0 +1,51 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    p {
+      text-align: center;
+      font-size: 60px;
+      margin-top: 0px;
+    }
+
+    #button {
+      width: auto;
+      height: 2em;
+      font-size: 24px;
+      font-family: Verdana, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <p id="demo"></p>
+  <script>
+    var countDownDate = new Date().getTime() + 5000;
+    var x = setInterval(function() {
+      var now = new Date().getTime();
+      var distance = countDownDate - now;
+      var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      document.getElementById("demo").innerHTML = seconds;
+      if (distance < 0) {
+        clearInterval(x);
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("demo").innerHTML = "SHOOT";
+          }
+        };
+        xhttp.open("GET", "showTarget?showTarget=10", true);
+        xhttp.send();
+      }
+    }, 1);
+  </script>
+  <p>
+    <form action="/?countDown=5&showTarget=10">
+      <input type="submit" value="Shoot again" id="button" />
+    </form>
+  </p>
+</body>
+
+</html>
