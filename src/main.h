@@ -1,6 +1,9 @@
 #ifndef main_h
 #define main_h
 
+void fastshoot_hide();
+void fastshoot_show();
+
 #if !defined(ESP8266)
 #include <ESP8266.h>
 #endif

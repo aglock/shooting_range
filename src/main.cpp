@@ -12,15 +12,16 @@
 #define OLED_RESET 0  // GPIO0
 
 Ticker ticker;
-Timer timer_show;
+Ticker showTicker;
+Ticker hideTicker;
 Timer rotateTimer;
 int id_timer_show;
 int id_timer_hide;
 AsyncWebServer server(80);
 Servo targetServo;
 //Adafruit_SSD1306 display(OLED_RESET);
-boolean snabbskytte_on = false;
 int _eeprom_adr = 0;
+boolean fastShoot = false;
 
 
 const String COUNT_DOWN_KEY = "countDown";
@@ -78,13 +79,17 @@ void showOnDisplay(String text){
 }
 */
 void servoStart(){
-  Serial.println("Servo Start");
+  long atTime = millis();
   targetServo.write(SERVO_START_POS);
+  Serial.print("Servo Start: ");
+  Serial.println(atTime);
 }
 
 void servoStop(){
-  Serial.println("Servo Stop");
+  long atTime = millis();
   targetServo.write(SERVO_END_POS);
+  Serial.print("Servo Stop: ");
+  Serial.println(atTime);
 }
 
 void setServoPos(int pos){
@@ -99,13 +104,24 @@ void setServoPos(int pos){
 }
 
 void showTarget(){
-  servoStop();
-}
-
-void hideTarget(){
   servoStart();
 }
 
+void hideTarget(){
+  servoStop();
+}
+void fastshoot_hide(){
+  hideTarget();
+  hideTicker.detach();
+  showTicker.attach(7, fastshoot_show);
+}
+
+void fastshoot_show(){
+  showTarget();
+  showTicker.detach();
+  hideTicker.attach(3, fastshoot_hide);
+
+}
 
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
@@ -114,6 +130,8 @@ void notFound(AsyncWebServerRequest *request) {
 void defaultPage(AsyncWebServerRequest *request) {
   rotateTimer.stop(id_timer_show);
   rotateTimer.stop(id_timer_hide);
+  showTicker.detach();
+  hideTicker.detach();
 
   String page = FPSTR(MY_HTTP_HEAD);
   page += FPSTR(HTTP_STYLE);
@@ -153,17 +171,17 @@ void config(AsyncWebServerRequest *request){
 }
 
 void snabbskytte(AsyncWebServerRequest *request){
-  hideTarget();
-  snabbskytte_on = true;
+  //hideTarget();
   String page = FPSTR(MY_HTTP_HEAD);
   page+= FPSTR(HTTP_STYLE);
   page+= FPSTR(HTTP_HEAD_END);
   page+= FPSTR(HTTP_FASTSHOOTING_BODY);
   page+= FPSTR(HTTP_RETURN_FORM);
   page+= FPSTR(HTTP_END);
-  id_timer_show = rotateTimer.every(7000, showTarget);
-  id_timer_hide = rotateTimer.every(7000+3000, hideTarget);
   request->send(200, "text/html", page);
+  //id_timer_show = rotateTimer.every(7000, showTarget);
+  //id_timer_hide = rotateTimer.every(10000, hideTarget);
+  fastshoot_show();
 }
 void setup() {
   // put your setup code here, to run once:
@@ -249,15 +267,6 @@ void setup() {
 
 void loop(void) {
   //server.handleClient();
-  MDNS.update();
-  timer_show.update();
+  //MDNS.update();
   rotateTimer.update();
-  int show;
-  int hide;
-  if(snabbskytte_on){
-
-  } else {
-    rotateTimer.stop(show);
-    rotateTimer.stop(hide);
-  }
 }
