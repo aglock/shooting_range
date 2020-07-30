@@ -5,7 +5,6 @@
 #include <ESPAsyncWebServer.h>
 //for LED status
 #include <Ticker.h>
-#include <Timer.h>
 #include <EEPROM.h>
 #include "main.h"
 
@@ -14,7 +13,6 @@
 Ticker ticker;
 Ticker showTicker;
 Ticker hideTicker;
-Timer rotateTimer;
 int id_timer_show;
 int id_timer_hide;
 AsyncWebServer server(80);
@@ -28,10 +26,12 @@ const String COUNT_DOWN_KEY = "countDown";
 const String SHOW_TARGET_KEY = "showTarget";
 const String HIDE_TARGET_KEY = "hideTarget";
 const int DEFAULT_COUNT_DOWN = 10;
-const int DEFAULT_SHOW_TARGET = 4;
+const int DEFAULT_SHOW_TARGET = 3;
+const int DEFAULT_HIDE_TARGET = 7;
+const int DEFAULT_SERVO_START = 8;
+const int DEFAULT_SERVO_END = 93;
 const uint8_t SERVO_PIN = D3;
-int SERVO_START_POS = 8;
-int SERVO_END_POS = 93;
+struct ConfigData cd = { .servoStart=DEFAULT_SERVO_START, .servoStop=DEFAULT_SERVO_END, .fastShootHide=DEFAULT_HIDE_TARGET, .fastShootShow=DEFAULT_SHOW_TARGET};
 
 void checkParameters(AsyncWebServerRequest *request){
   int params = request->params();
@@ -47,17 +47,18 @@ void checkParameters(AsyncWebServerRequest *request){
   }
 }
 
-int readEndPosFromMem(){
-    return EEPROM.read(_eeprom_adr);
+void loadConfigFromEeprom(){
+  EEPROM.get(_eeprom_adr, cd);
+  if(! (cd.servoStart >=0 || cd.servoStart <= 180)){
+    cd.servoStart = DEFAULT_SERVO_START;
+  }
+  if(! (cd.servoStop >=0 || cd.servoStart <= 180)){
+    cd.servoStop = DEFAULT_SERVO_END;
+  }
 }
 
-int readStartPosFromMem(){
-    return EEPROM.read(_eeprom_adr + 1);
-}
-
-void saveServoPositionsToEeprom(){
-  EEPROM.write(_eeprom_adr, SERVO_END_POS);
-  EEPROM.write(_eeprom_adr+1, SERVO_START_POS);
+void saveConfigToEeprom(){
+  EEPROM.put(_eeprom_adr, cd);
   EEPROM.commit();
 }
 
@@ -67,27 +68,17 @@ void tick()
   int state = digitalRead(LED_BUILTIN);  // get the current state of GPIO1 pin
   digitalWrite(LED_BUILTIN, !state);     // set pin to the opposite state
 }
-/**
-void showOnDisplay(String text){
-  display.clearDisplay();
-  // text display tests
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(1,0);
-  display.println(text);
-  display.display();
-}
-*/
+
 void servoStart(){
   long atTime = millis();
-  targetServo.write(SERVO_START_POS);
+  targetServo.write(cd.servoStart);
   Serial.print("Servo Start: ");
   Serial.println(atTime);
 }
 
 void servoStop(){
   long atTime = millis();
-  targetServo.write(SERVO_END_POS);
+  targetServo.write(cd.servoStop);
   Serial.print("Servo Stop: ");
   Serial.println(atTime);
 }
@@ -113,13 +104,13 @@ void hideTarget(){
 void fastshoot_hide(){
   hideTarget();
   hideTicker.detach();
-  showTicker.attach(7, fastshoot_show);
+  showTicker.attach(cd.fastShootHide, fastshoot_show);
 }
 
 void fastshoot_show(){
   showTarget();
   showTicker.detach();
-  hideTicker.attach(3, fastshoot_hide);
+  hideTicker.attach(cd.fastShootShow, fastshoot_hide);
 
 }
 
@@ -128,8 +119,6 @@ void notFound(AsyncWebServerRequest *request) {
 }
 
 void defaultPage(AsyncWebServerRequest *request) {
-  rotateTimer.stop(id_timer_show);
-  rotateTimer.stop(id_timer_hide);
   showTicker.detach();
   hideTicker.detach();
 
@@ -144,19 +133,32 @@ void defaultPage(AsyncWebServerRequest *request) {
 }
 
 void config(AsyncWebServerRequest *request){
-  String startpos=String(SERVO_START_POS);
-  String endpos=String(SERVO_END_POS);
+  String startpos=String(cd.servoStart);
+  String endpos=String(cd.servoStop);
+  String showTime = String(cd.fastShootShow);
+  String hideTime = String(cd.fastShootHide);
+  checkParameters(request);
   if(request->hasParam("startpos")){
     startpos = request->getParam("startpos")->value();
   }
   if(request->hasParam("endpos")){
     endpos = request->getParam("endpos")->value();
   }
-  SERVO_START_POS = startpos.toInt();
-  SERVO_END_POS = endpos.toInt();
-  saveServoPositionsToEeprom();
+  if(request->hasParam("showTime")){
+    showTime = request->getParam("showTime")->value();
+  }
+  if(request->hasParam("hideTime")){
+    hideTime = request->getParam("hideTime")->value();
+  }
+  cd.servoStart = startpos.toInt();
+  cd.servoStop = endpos.toInt();
+  cd.fastShootHide = hideTime.toInt();
+  cd.fastShootShow = showTime.toInt();
+  saveConfigToEeprom();
   Serial.println("Start pos saved:" + startpos);
   Serial.println("End pos saved: " + endpos);
+  Serial.println("Showtime saved: " + showTime);
+  Serial.println("Hidetime saved: " + hideTime);
 
   String page = FPSTR(MY_HTTP_HEAD);
   page+= FPSTR(HTTP_STYLE);
@@ -167,6 +169,8 @@ void config(AsyncWebServerRequest *request){
   page+= FPSTR(HTTP_END);
   page.replace("{{startpos}}", startpos);
   page.replace("{{endpos}}", endpos);
+  page.replace("{{showTime}}", showTime);
+  page.replace("{{hideTime}}", hideTime);
   request->send(200, "text/html", page);
 }
 
@@ -191,10 +195,9 @@ void setup() {
   //display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
 
   //load start & stop position for servo
-  SERVO_END_POS = readEndPosFromMem();
-  SERVO_START_POS = readStartPosFromMem();
-  Serial.println("Start pos from eeprom: " + SERVO_START_POS);
-  Serial.println("End pos from eeprom: " + SERVO_END_POS);
+  loadConfigFromEeprom();
+  Serial.println("Start pos from eeprom: " + cd.servoStart);
+  Serial.println("End pos from eeprom: " + cd.servoStop);
   //set led pin as output
   pinMode(LED_BUILTIN, OUTPUT);
   // start ticker with 0.5 because we start in AP mode and try to connect
@@ -228,6 +231,12 @@ void setup() {
 
     server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request){
       if(request->hasParam("save_btn")){
+        config(request);
+      } else if (request->hasParam("reset")){
+        cd.fastShootHide = DEFAULT_HIDE_TARGET;
+        cd.fastShootShow = DEFAULT_SHOW_TARGET;
+        cd.servoStart = DEFAULT_SERVO_START;
+        cd.servoStop = DEFAULT_SERVO_END;
         config(request);
       } else {
         request->redirect("/");
@@ -267,6 +276,5 @@ void setup() {
 
 void loop(void) {
   //server.handleClient();
-  //MDNS.update();
-  rotateTimer.update();
+  MDNS.update();
 }
