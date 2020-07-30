@@ -3,12 +3,10 @@
 #include <ESP8266mDNS.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-//for LED status
 #include <Ticker.h>
 #include <EEPROM.h>
 #include "main.h"
 
-#define OLED_RESET 0  // GPIO0
 
 Ticker ticker;
 Ticker showTicker;
@@ -17,7 +15,6 @@ int id_timer_show;
 int id_timer_hide;
 AsyncWebServer server(80);
 Servo targetServo;
-//Adafruit_SSD1306 display(OLED_RESET);
 int _eeprom_adr = 0;
 boolean fastShoot = false;
 
@@ -25,11 +22,10 @@ boolean fastShoot = false;
 const String COUNT_DOWN_KEY = "countDown";
 const String SHOW_TARGET_KEY = "showTarget";
 const String HIDE_TARGET_KEY = "hideTarget";
-const int DEFAULT_COUNT_DOWN = 10;
-const int DEFAULT_SHOW_TARGET = 3;
-const int DEFAULT_HIDE_TARGET = 7;
-const int DEFAULT_SERVO_START = 8;
-const int DEFAULT_SERVO_END = 93;
+const int DEFAULT_SHOW_TARGET = 3; //sec
+const int DEFAULT_HIDE_TARGET = 7; //sec
+const int DEFAULT_SERVO_START = 90; //8
+const int DEFAULT_SERVO_END = 90; //93
 const uint8_t SERVO_PIN = D3;
 struct ConfigData cd = { .servoStart=DEFAULT_SERVO_START, .servoStop=DEFAULT_SERVO_END, .fastShootHide=DEFAULT_HIDE_TARGET, .fastShootShow=DEFAULT_SHOW_TARGET};
 
@@ -192,9 +188,8 @@ void setup() {
   Serial.begin(115200);
   delay(3000);
   EEPROM.begin(128);
-  //display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
 
-  //load start & stop position for servo
+  //load configuration
   loadConfigFromEeprom();
   Serial.println("Start pos from eeprom: " + cd.servoStart);
   Serial.println("End pos from eeprom: " + cd.servoStop);
