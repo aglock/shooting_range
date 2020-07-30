@@ -182,9 +182,9 @@ void snabbskytte(AsyncWebServerRequest *request){
   page+= FPSTR(HTTP_FASTSHOOTING_BODY);
   page+= FPSTR(HTTP_RETURN_FORM);
   page+= FPSTR(HTTP_END);
+  page.replace("{{showTime}}", String(cd.fastShootShow));
+  page.replace("{{hideTime}}", String(cd.fastShootHide));
   request->send(200, "text/html", page);
-  //id_timer_show = rotateTimer.every(7000, showTarget);
-  //id_timer_hide = rotateTimer.every(10000, hideTarget);
   fastshoot_show();
 }
 void setup() {
