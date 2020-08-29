@@ -22,8 +22,8 @@ boolean fastShoot = false;
 const String COUNT_DOWN_KEY = "countDown";
 const String SHOW_TARGET_KEY = "showTarget";
 const String HIDE_TARGET_KEY = "hideTarget";
-const int DEFAULT_SHOW_TARGET = 3; //sec
-const int DEFAULT_HIDE_TARGET = 7; //sec
+const int DEFAULT_SHOW_TARGET = 3000; //msec
+const int DEFAULT_HIDE_TARGET = 7000; //msec
 const int DEFAULT_SERVO_START = 90; //8
 const int DEFAULT_SERVO_END = 90; //93
 const uint8_t SERVO_PIN = D3;
@@ -45,11 +45,17 @@ void checkParameters(AsyncWebServerRequest *request){
 
 void loadConfigFromEeprom(){
   EEPROM.get(_eeprom_adr, cd);
-  if(! (cd.servoStart >=0 || cd.servoStart <= 180)){
+  if(! (cd.servoStart <=0 || cd.servoStart <= 180)){
     cd.servoStart = DEFAULT_SERVO_START;
   }
-  if(! (cd.servoStop >=0 || cd.servoStart <= 180)){
+  if(! (cd.servoStop <=0 || cd.servoStart <= 180)){
     cd.servoStop = DEFAULT_SERVO_END;
+  }
+  if(cd.fastShootHide < 0 || cd.fastShootHide > 60000){
+    cd.fastShootHide = DEFAULT_HIDE_TARGET;
+  }
+  if(cd.fastShootShow < 0 || cd.fastShootShow > 60000){
+    cd.fastShootShow = DEFAULT_SHOW_TARGET;
   }
 }
 
@@ -100,13 +106,13 @@ void hideTarget(){
 void fastshoot_hide(){
   hideTarget();
   hideTicker.detach();
-  showTicker.attach(cd.fastShootHide, fastshoot_show);
+  showTicker.attach_ms(cd.fastShootHide, fastshoot_show);
 }
 
 void fastshoot_show(){
   showTarget();
   showTicker.detach();
-  hideTicker.attach(cd.fastShootShow, fastshoot_hide);
+  hideTicker.attach_ms(cd.fastShootShow, fastshoot_hide);
 
 }
 
